@@ -1,7 +1,7 @@
 # -*- coding: utf-8 *-*
 
 import unittest
-from pypfp.core import Field, Record
+from pypfp.core import FieldDefinition, RecordDefinition
 from pypfp.converters import FloatConverter, IntConverter
 
 
@@ -11,13 +11,13 @@ class Foo(object):
         self.__dict__.update(kwargs)
 
 
-class TestRecord(unittest.TestCase):
+class TestRecordDefinition(unittest.TestCase):
 
     def setUp(self):
-        self.example = Record(padchar='?')
-        self.example.add_field(Field('name', 0, 10))
-        self.example.add_field(Field('age', 10, 2, IntConverter(2)))
-        self.example.add_field(Field('salary', 12, 14,
+        self.example = RecordDefinition(Foo, padchar='?')
+        self.example.add_field(FieldDefinition('name', 0, 10))
+        self.example.add_field(FieldDefinition('age', 10, 2, IntConverter(2)))
+        self.example.add_field(FieldDefinition('salary', 12, 14,
                                         FloatConverter(14, 4, '.')))
 
     def test_init(self):
@@ -40,50 +40,48 @@ class TestRecord(unittest.TestCase):
         s = self.example.to_string(f)
         self.assertEquals('ariel     ??32000000123.4500', s)
 
-    def test_value_recover_without_instance_with_padchar(self):
+    def test_value_recover_with_padchar(self):
         string = 'ariel     ??32000000123.4500'
         self.example.fields[1].start += 2
         self.example.fields[2].start += 2
         f = self.example.to_value(string)
-        self.assertIsInstance(f, dict)
-        self.assertEqual(f['name'], 'ariel')
-        self.assertEqual(f['age'], 32)
-        self.assertEqual(f['salary'], 123.45)
+        self.assertEqual(f.name, 'ariel')
+        self.assertEqual(f.age, 32)
+        self.assertEqual(f.salary, 123.45)
 
     def test_value_recover_with_instance(self):
         string = 'ariel     32000000123.4500'
-        f = Foo()
-        self.example.to_value(string, f)
+        f = self.example.to_value(string)
         self.assertEqual(f.name, 'ariel')
         self.assertEqual(f.age, 32)
         self.assertEqual(f.salary, 123.45)
 
 
-class TestField(unittest.TestCase):
+class TestFieldDefinition(unittest.TestCase):
 
     def test_get_format_string_defaults(self):
-        f = Field('test', 0, 10)
+        f = FieldDefinition('test', 0, 10)
         s = f.format
         self.assertEquals('{:<10}', s)
 
     def test_get_format_string_padchar(self):
-        f = Field('test', 0, 10, padchar='-')
+        f = FieldDefinition('test', 0, 10, padchar='-')
         s = f.format
         self.assertEquals('{:-<10}', s)
 
     def test_get_format_string_align_center(self):
-        f = Field('test', 0, 10, padchar='-', align='^')
+        f = FieldDefinition('test', 0, 10, padchar='-', align='^')
         s = f.format
         self.assertEquals('{:-^10}', s)
 
     def test_to_string_defaults(self):
-        f = Field('test', 0, 10)
+        f = FieldDefinition('test', 0, 10)
         obj = Foo()
         obj.test = 'some'
         self.assertEquals('some      ', f.to_string(obj))
 
     def test_to_string_with_float_connector(self):
-        f = Field('test', 0, 10, FloatConverter(10, 4, ''))
+        f = FieldDefinition('test', 0, 10, FloatConverter(10, 4, ''))
         obj = Foo()
         obj.test = -123.56
         self.assertEquals('-001235600', f.to_string(obj))

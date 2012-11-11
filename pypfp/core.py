@@ -3,10 +3,11 @@
 from converters import *
 
 
-class Record(object):
+class RecordDefinition(object):
 
-    def __init__(self, fields=None, padchar=' '):
+    def __init__(self, record_class, fields=None, padchar=' '):
         self.fields = fields if fields else []
+        self.record_class = record_class
         self.padchar = padchar
         self.string_format = None
         self._initiated = False
@@ -36,21 +37,16 @@ class Record(object):
         return self.string_format.format(*[x.to_string(obj)
                                             for x in self.fields])
 
-    def to_value(self, line, obj=None):
-        if obj is None:
-            r = dict()
-            obj = r
-        else:
-            r = obj.__dict__
+    def to_value(self, line):
+        obj = self.record_class()
         for field in self.fields:
             s = line[field.start:field.start + field.length]
-            print s, field.start, field.length
             v = field.to_value(s)
-            r[field.name] = v
+            setattr(obj, field.name, v)
         return obj
 
 
-class Field(object):
+class FieldDefinition(object):
 
     aligns = {
                 '<': lambda s, c: s.rstrip(c),
@@ -79,7 +75,7 @@ class Field(object):
 
     def to_value(self, string):
         if self.padchar != '':
-            string = Field.aligns[self.align](string, self.padchar)
+            string = FieldDefinition.aligns[self.align](string, self.padchar)
         if self.converter:
             return self.converter.to_value(string)
         return string
@@ -87,8 +83,8 @@ class Field(object):
 
 class FixedEngine(object):
 
-    def __init__(self, records, selector=None):
-        assert len(records) == 1 or len(records) > 1 and selector is not None
+    def __init__(self, records, selectors=None):
+        assert len(records) == 1 or len(records) > 1 and selectors is not None
         self.records = records
         self.selector = selector
 
