@@ -33,7 +33,6 @@ class RecordDefinition(object):
     def to_string(self, obj):
         if not self._initiated:
             self.init()
-        print self.string_format
         return self.string_format.format(*[x.to_string(obj)
                                             for x in self.fields])
 
@@ -55,7 +54,7 @@ class FieldDefinition(object):
             }
 
     def __init__(self, name, start, length, converter=None,
-                 padchar=' ', align='<'):
+                 padchar=' ', align='<', truncate=False):
         self.name = name
         self.start = start
         self.length = length
@@ -64,6 +63,7 @@ class FieldDefinition(object):
         self.align = align
         self.format = '{:%s%s%d}' % (self.padchar.strip(), self.align,
                                     self.length)
+        self.truncate = truncate
 
     def to_string(self, obj):
         v = getattr(obj, self.name)
@@ -71,7 +71,10 @@ class FieldDefinition(object):
             s = self.converter.to_string(v)
         else:
             s = str(v)
-        return self.format.format(s)
+        s = self.format.format(s)
+        if len(s) > self.length and not self.truncate:
+            raise ValueError('{0} is too large'.format(s))
+        return s[:self.length]
 
     def to_value(self, string):
         if self.padchar != '':
@@ -83,15 +86,37 @@ class FieldDefinition(object):
 
 class FixedEngine(object):
 
-    def __init__(self, records, selectors=None):
-        assert len(records) == 1 or len(records) > 1 and selectors is not None
+    def __init__(self, records, selector=None):
+        assert len(records) == 1 or len(records) > 1 and selector is not None
         self.records = records
-        self.selector = selector
+        self.record_dict = {r.record_class.__name__: r for r in self.records}
+
+        if selector is None:
+            r = records[0]
+            self.selector = lambda x: r
+        else:
+            self.selector = selector
 
     def save(self, path, objects):
-        pass
+        lines = []
+        for obj in objects:
+            record = self.find_record(obj)
+            lines.append(record.to_string(obj))
+
+        with open(path, 'w') as f:
+            f.write('\n'.join(lines))
 
     def load(self, path):
-        pass
+        lines = open(path, 'r').readlines()
+        res = []
+        for line in lines:
+            record = self.selector(line)
+            res.append(record.to_value(line))
+        return res
+
+    def find_record(self, obj):
+        return self.record_dict[obj.__class__.__name__]
+
+
 
 
