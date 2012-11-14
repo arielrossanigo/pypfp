@@ -1,11 +1,12 @@
 # -*- coding: utf-8 *-*
 
 from converters import *
+import codecs
 
 
-class RecordDefinition(object):
+class Record(object):
 
-    def __init__(self, record_class, fields=None, padchar=' '):
+    def __init__(self, record_class, fields=None, padchar=u' '):
         self.fields = fields if fields else []
         self.record_class = record_class
         self.padchar = padchar
@@ -25,9 +26,9 @@ class RecordDefinition(object):
             if c > 0:
                 res.append(self.padchar * c)
             #add format field
-            res.append('{:%d}' % field.length)
-            cur_pos = field.start + field.length
-        self.string_format = ''.join(res)
+            res.append(u'{:%d}' % field.width)
+            cur_pos = field.start + field.width
+        self.string_format = u''.join(res)
         self._initiated = True
 
     def to_string(self, obj):
@@ -39,49 +40,27 @@ class RecordDefinition(object):
     def to_value(self, line):
         obj = self.record_class()
         for field in self.fields:
-            s = line[field.start:field.start + field.length]
+            s = line[field.start:field.start + field.width]
             v = field.to_value(s)
             setattr(obj, field.name, v)
         return obj
 
 
-class FieldDefinition(object):
+class Field(object):
 
-    aligns = {
-                '<': lambda s, c: s.rstrip(c),
-                '^': lambda s, c: s.strip(c),
-                '>': lambda s, c: s.lstrip(c)
-            }
-
-    def __init__(self, name, start, length, converter=None,
-                 padchar=' ', align='<', truncate=False):
+    def __init__(self, name, start, width, converter_class=String,
+                 **converter_params):
         self.name = name
         self.start = start
-        self.length = length
-        self.converter = converter
-        self.padchar = padchar
-        self.align = align
-        self.format = '{:%s%s%d}' % (self.padchar.strip(), self.align,
-                                    self.length)
-        self.truncate = truncate
+        self.width = width
+        self.converter = converter_class(width, **converter_params)
 
     def to_string(self, obj):
         v = getattr(obj, self.name)
-        if self.converter:
-            s = self.converter.to_string(v)
-        else:
-            s = str(v)
-        s = self.format.format(s)
-        if len(s) > self.length and not self.truncate:
-            raise ValueError('{0} is too large'.format(s))
-        return s[:self.length]
+        return self.converter.to_string(v)
 
     def to_value(self, string):
-        if self.padchar != '':
-            string = FieldDefinition.aligns[self.align](string, self.padchar)
-        if self.converter:
-            return self.converter.to_value(string)
-        return string
+        return self.converter.to_value(string)
 
 
 class FixedEngine(object):
@@ -97,17 +76,17 @@ class FixedEngine(object):
         else:
             self.selector = selector
 
-    def save(self, path, objects):
+    def save(self, path, objects, encoding='utf-8'):
         lines = []
         for obj in objects:
             record = self.find_record(obj)
-            lines.append(record.to_string(obj))
+            lines.append((record.to_string(obj)).encode(encoding))
 
         with open(path, 'w') as f:
             f.write('\n'.join(lines))
 
-    def load(self, path):
-        lines = open(path, 'r').readlines()
+    def load(self, path, encoding='utf-8'):
+        lines = codecs.open(path, 'r', encoding).readlines()
         res = []
         for line in lines:
             record = self.selector(line)
