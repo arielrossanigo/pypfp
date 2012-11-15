@@ -6,10 +6,10 @@ import codecs
 
 class Record(object):
 
-    def __init__(self, record_class, fields=None, padchar=u' '):
+    def __init__(self, record_class, fields=None, fill=u' '):
         self.fields = fields if fields else []
         self.record_class = record_class
-        self.padchar = padchar
+        self.fill = fill
         self.string_format = None
         self._initiated = False
 
@@ -21,10 +21,10 @@ class Record(object):
         cur_pos = 0
         res = []
         for field in self.fields:
-            #fill with padchar
+            #fill
             c = field.start - cur_pos
             if c > 0:
-                res.append(self.padchar * c)
+                res.append(self.fill * c)
             #add format field
             res.append(u'{:%d}' % field.width)
             cur_pos = field.start + field.width

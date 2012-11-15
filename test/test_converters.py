@@ -45,6 +45,9 @@ class TestInt(unittest.TestCase):
     def test_null_string(self):
         self._test(None, 'NULL', width=4, align='=', null_string='NULL')
 
+    def test_None_without_null_string(self):
+        self.assertRaises(ValueError, self._test, None, 'NULL', width=4)
+
 
 class TestFloat(unittest.TestCase):
 
