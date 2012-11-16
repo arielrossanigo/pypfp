@@ -67,6 +67,8 @@ class Int(Number):
         if r is None:
             return None
         string, sign = r
+        if string == '':
+            return 0
         return int(string) * sign
 
 
@@ -100,6 +102,8 @@ class Float(Number):
                                             string[self.precision - 1:]
         elif self.decimal_separator != '.':
             string = string.replace(self.decimal_separator, '.')
+        if string in ('', '.'):
+            return 0
         return float(string) * sign
 
 

@@ -48,6 +48,9 @@ class TestInt(unittest.TestCase):
     def test_None_without_null_string(self):
         self.assertRaises(ValueError, self._test, None, 'NULL', width=4)
 
+    def test_cero(self):
+        self._test(0, '0000', width=4)
+
 
 class TestFloat(unittest.TestCase):
 
@@ -85,6 +88,13 @@ class TestFloat(unittest.TestCase):
     def test_negative_float_with_comma_as_separator(self):
         self._test(-12.34, '-12,3400 ', precision=4, width=9, align='<',
                                         fill=' ', decimal_separator=',')
+
+    def test_cero(self):
+        self._test(0, '0000.0000', precision=4, width=9, fill='0')
+
+    def test_cero_without_separator(self):
+        self._test(0, '000000000', precision=4, width=9, fill='0',
+                                                        decimal_separator='')
 
 
 class TestString(unittest.TestCase):

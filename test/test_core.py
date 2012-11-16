@@ -99,10 +99,14 @@ class TestField(unittest.TestCase):
         self.assertEqual(self.age.to_string(self.a), '0032')
 
     def test_to_value_string(self):
-        self.assertEqual(self.name.to_value('arielPPPPP'), self.a.name)
+        f = Foo()
+        self.name.to_value('arielPPPPP', f)
+        self.assertEqual(f.name, self.a.name)
 
     def test_to_value_int(self):
-        self.assertEqual(self.age.to_value('0032'), self.a.age)
+        f = Foo()
+        self.age.to_value('0032', f)
+        self.assertEqual(f.age, self.a.age)
 
     def test_to_string_defaults_too_large(self):
         f = Field('name', 0, 10)

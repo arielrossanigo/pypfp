@@ -41,8 +41,7 @@ class Record(object):
         obj = self.record_class()
         for field in self.fields:
             s = line[field.start:field.start + field.width]
-            v = field.to_value(s)
-            setattr(obj, field.name, v)
+            field.to_value(s, obj)
         return obj
 
 
@@ -59,8 +58,9 @@ class Field(object):
         v = getattr(obj, self.name)
         return self.converter.to_string(v)
 
-    def to_value(self, string):
-        return self.converter.to_value(string)
+    def to_value(self, string, obj):
+        v = self.converter.to_value(string)
+        setattr(obj, self.name, v)
 
 
 class FixedEngine(object):
