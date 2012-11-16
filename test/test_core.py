@@ -153,10 +153,27 @@ class TestFixedEngine(unittest.TestCase):
         obj = FooA()
         self.assertIs(r.find_record(obj), self.record_a)
 
-    def test_init_with_two_records(self):
+    def test_init_with_two_records_custom_selector(self):
         self.assertRaises(AssertionError, FixedEngine,
                                                 [self.record_a, self.record_b])
         r = FixedEngine([self.record_a, self.record_b], self.selector)
+        obj_a = FooA()
+        obj_b = FooB()
+        self.assertEquals(len(r.records), 2)
+        self.assertIs(r.records[0], self.record_a)
+        self.assertIs(r.records[1], self.record_b)
+        self.assertIs(r.selector('01Ariel'), self.record_a)
+        self.assertIs(r.selector('02Ariel'), self.record_b)
+        self.assertIs(r.find_record(obj_a), self.record_a)
+        self.assertIs(r.find_record(obj_b), self.record_b)
+
+    def test_init_with_two_records_using_selector_string(self):
+        self.assertRaises(AssertionError, FixedEngine,
+                                                [self.record_a, self.record_b])
+        self.record_a.selector_string = u'01'
+        self.record_b.selector_string = u'02'
+
+        r = FixedEngine([self.record_a, self.record_b], selector_slice=(0, 2))
         obj_a = FooA()
         obj_b = FooB()
         self.assertEquals(len(r.records), 2)

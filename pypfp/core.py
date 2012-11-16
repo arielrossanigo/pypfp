@@ -6,12 +6,14 @@ import codecs
 
 class Record(object):
 
-    def __init__(self, record_class, fields=None, fill=u' '):
+    def __init__(self, record_class, fields=None, fill=u' ',
+                       selector_string=u''):
         self.fields = fields if fields else []
         self.record_class = record_class
         self.fill = fill
         self.string_format = None
         self._initiated = False
+        self.selector_string = selector_string
 
     def add_field(self, field):
         self.fields.append(field)
@@ -65,16 +67,21 @@ class Field(object):
 
 class FixedEngine(object):
 
-    def __init__(self, records, selector=None):
-        assert len(records) == 1 or len(records) > 1 and selector is not None
+    def __init__(self, records, selector=None, selector_slice=None):
         self.records = records
         self.record_dict = {r.record_class.__name__: r for r in self.records}
 
-        if selector is None:
-            r = records[0]
-            self.selector = lambda x: r
-        else:
+        if selector is not None:
             self.selector = selector
+        elif selector_slice is not None:
+            _x, _y = selector_slice
+            d = {r.selector_string: r for r in records}
+            self.selector = lambda s: d[s[_x:_y]]
+        elif len(records) == 1:
+            r = records[0]
+            self.selector = lambda s: r
+        else:
+            raise AssertionError('No selector provided')
 
     def save(self, path, objects, encoding='utf-8'):
         lines = []
