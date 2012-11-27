@@ -3,11 +3,11 @@
 import unittest
 from pypfp.core import Field, Record
 from pypfp.core import FixedEngine
-from pypfp.converters import Float, Int, String, DateTime
+from pypfp.converters import Float, Int, String  # , DateTime
 import os
 
 
-class Foo(object):
+class Foo(Record):
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -21,50 +21,72 @@ class Foo(object):
                     for k, v in self.__dict__.items()])
 
 
-class FooA(Foo):
-    pass
+class RecordA(Foo):
+    typ = Field(Int, 2)
+    name = Field(String, 10)
+    age = Field(Int, 2)
+    salary = Field(Float, 14, precision=4)
+
+    class Meta:
+        selector_string = u'01'
 
 
-class FooB(Foo):
-    pass
+class RecordB(Foo):
+    typ = Field(Int, 2)
+    address = Field(String, 10, truncate=True)
+    phone = Field(String, 20)
+
+    class Meta:
+        selector_string = u'02'
 
 
 class TestRecordDefinition(unittest.TestCase):
 
     def setUp(self):
-        self.example = Record(Foo, fill='?')
-        self.example.add_field(Field('name', 0, 10, String))
-        self.example.add_field(Field('age', 10, 2, Int))
-        self.example.add_field(Field('salary', 12, 14, Float, precision=4))
+        class Example(Record):
+            name = Field(String, 10)
+            age = Field(Int, 2)
+            salary = Field(Float, 14, precision=4)
+
+        class Example2(Record):
+            name = Field(String, 10, start=0)
+            age = Field(Int, 2, start=12)
+            salary = Field(Float, 14, start=14, precision=4)
+
+            class Meta:
+                fill = u'?'
+
+        self.example = Example
+        self.example2 = Example2
+
+        self.f1 = Example()
+        self.f1.name = 'ariel'
+        self.f1.age = 32
+        self.f1.salary = 123.45
+
+        self.f2 = Example2()
+        self.f2.name = 'ariel'
+        self.f2.age = 32
+        self.f2.salary = 123.45
 
     def test_init(self):
-        self.assertFalse(self.example._initiated)
-        self.assertEquals(len(self.example.fields), 3)
-        self.assertIsNone(self.example.string_format)
-        self.example.init()
-        self.assertTrue(self.example)
-        self.assertIsNotNone(self.example.string_format)
+        self.assertEquals(len(self.example._record_options.fields), 3)
+        self.assertIsNotNone(self.example._record_options.string_format)
 
     def test_line_generation(self):
-        f = Foo(name='ariel', age=32, salary=123.45)
-        s = self.example.to_string(f)
+        s = self.example.to_string(self.f1)
         self.assertEquals('ariel     32000000123.4500', s)
 
     def test_line_generation_with_padchar(self):
-        f = Foo(name='ariel', age=32, salary=123.45)
-        self.example.fields[1].start += 2
-        self.example.fields[2].start += 2
-        s = self.example.to_string(f)
+        s = self.example2.to_string(self.f2)
         self.assertEquals('ariel     ??32000000123.4500', s)
 
     def test_value_recover_with_padchar(self):
         string = 'ariel     ??32000000123.4500'
-        self.example.fields[1].start += 2
-        self.example.fields[2].start += 2
-        f = self.example.to_value(string)
-        self.assertEqual(f.name, 'ariel')
-        self.assertEqual(f.age, 32)
-        self.assertEqual(f.salary, 123.45)
+        f = self.example2.to_value(string)
+        self.assertEqual(f.name, self.f2.name)
+        self.assertEqual(f.age, self.f2.age)
+        self.assertEqual(f.salary, self.f2.salary)
 
     def test_value_recover_with_instance(self):
         string = 'ariel     32000000123.4500'
@@ -72,13 +94,15 @@ class TestRecordDefinition(unittest.TestCase):
         self.assertEqual(f.name, 'ariel')
         self.assertEqual(f.age, 32)
         self.assertEqual(f.salary, 123.45)
+        self.assertEqual(type(f), self.example)
 
 
 class TestField(unittest.TestCase):
 
     def setUp(self):
-        self.name = Field('name', 0, 10, truncate=True, fill='P')
-        self.age = Field('age', 10, 4, Int)
+        self.name = Field(String, 10, name='name', start=0, fill='P',
+                          truncate=True)
+        self.age = Field(Int, 4, name='age', start=10)
         self.a = Foo()
         self.a.name = 'ariel'
         self.a.age = 32
@@ -109,7 +133,7 @@ class TestField(unittest.TestCase):
         self.assertEqual(f.age, self.a.age)
 
     def test_to_string_defaults_too_large(self):
-        f = Field('name', 0, 10)
+        f = Field(String, 10, name='name', start=0)
         self.a.name = 'ariel rossanigo'
         self.assertRaises(ValueError, f.to_string, self.a)
 
@@ -121,71 +145,55 @@ class TestField(unittest.TestCase):
 class TestFixedEngine(unittest.TestCase):
 
     def setUp(self):
-        self.record_a = Record(FooA, [
-                    Field('type', 0, 2, Int),
-                    Field('name', 2, 10, String),
-                    Field('age', 12, 2, Int),
-                    Field('salary', 14, 14, Float, precision=4)
-                                    ])
 
-        self.record_b = Record(FooB, [
-                    Field('type', 0, 2, Int),
-                    Field('address', 2, 10, String, truncate=True),
-                    Field('phone', 12, 20, String)
-                                        ])
-
-        d = {'01': self.record_a, '02': self.record_b}
+        d = {'01': RecordA, '02': RecordB}
         self.selector = lambda x: d[x[0:2]]
 
         self.objs = []
-        self.objs.append(FooA(type=1, name='ariel', age=32, salary=123.45))
-        self.objs.append(FooB(type=2, address='galvez 60', phone='1234-234'))
-        self.objs.append(FooB(type=2, address='rafaela -', phone='1234-234'))
-        self.objs.append(FooA(type=1, name='lorena', age=30, salary=678.99))
-        self.objs.append(FooB(type=2, address=u'áÑ¡¿ü', phone='1234-234'))
-        self.objs.append(FooB(type=2, address='rafaela -', phone='1234-234'))
+
+        self.objs.append(RecordA(typ=1, name='ariel', age=32, salary=123.45))
+        self.objs.append(RecordB(typ=2, address='galvez 60', phone='1234-234'))
+        self.objs.append(RecordB(typ=2, address='rafaela -', phone='1234-234'))
+        self.objs.append(RecordA(typ=1, name='lorena', age=30, salary=678.99))
+        self.objs.append(RecordB(typ=2, address=u'áÑ¡¿ü', phone='1234-234'))
+        self.objs.append(RecordB(typ=2, address='rafaela -', phone='1234-234'))
 
     def test_init_with_one_record(self):
-        r = FixedEngine([self.record_a])
+        r = FixedEngine([RecordA])
         self.assertEquals(len(r.records), 1)
-        self.assertIs(r.records[0], self.record_a)
-        self.assertIs(r.selector('anything'), self.record_a)
-        obj = FooA()
-        self.assertIs(r.find_record(obj), self.record_a)
+        self.assertIs(r.records[0], RecordA)
+        self.assertIs(r.selector('anything'), RecordA)
+        obj = RecordA()
+        self.assertIs(r.find_record(obj), RecordA)
 
     def test_init_with_two_records_custom_selector(self):
-        self.assertRaises(AssertionError, FixedEngine,
-                                                [self.record_a, self.record_b])
-        r = FixedEngine([self.record_a, self.record_b], self.selector)
-        obj_a = FooA()
-        obj_b = FooB()
+        self.assertRaises(AssertionError, FixedEngine, [RecordA, RecordB])
+        r = FixedEngine([RecordA, RecordB], self.selector)
+        obj_a = RecordA()
+        obj_b = RecordB()
         self.assertEquals(len(r.records), 2)
-        self.assertIs(r.records[0], self.record_a)
-        self.assertIs(r.records[1], self.record_b)
-        self.assertIs(r.selector('01Ariel'), self.record_a)
-        self.assertIs(r.selector('02Ariel'), self.record_b)
-        self.assertIs(r.find_record(obj_a), self.record_a)
-        self.assertIs(r.find_record(obj_b), self.record_b)
+        self.assertIs(r.records[0], RecordA)
+        self.assertIs(r.records[1], RecordB)
+        self.assertIs(r.selector('01Ariel'), RecordA)
+        self.assertIs(r.selector('02Ariel'), RecordB)
+        self.assertIs(r.find_record(obj_a), RecordA)
+        self.assertIs(r.find_record(obj_b), RecordB)
 
     def test_init_with_two_records_using_selector_string(self):
-        self.assertRaises(AssertionError, FixedEngine,
-                                                [self.record_a, self.record_b])
-        self.record_a.selector_string = u'01'
-        self.record_b.selector_string = u'02'
-
-        r = FixedEngine([self.record_a, self.record_b], selector_slice=(0, 2))
-        obj_a = FooA()
-        obj_b = FooB()
+        self.assertRaises(AssertionError, FixedEngine, [RecordA, RecordB])
+        r = FixedEngine([RecordA, RecordB], selector_slice=(0, 2))
+        obj_a = RecordA()
+        obj_b = RecordB()
         self.assertEquals(len(r.records), 2)
-        self.assertIs(r.records[0], self.record_a)
-        self.assertIs(r.records[1], self.record_b)
-        self.assertIs(r.selector('01Ariel'), self.record_a)
-        self.assertIs(r.selector('02Ariel'), self.record_b)
-        self.assertIs(r.find_record(obj_a), self.record_a)
-        self.assertIs(r.find_record(obj_b), self.record_b)
+        self.assertIs(r.records[0], RecordA)
+        self.assertIs(r.records[1], RecordB)
+        self.assertIs(r.selector('01Ariel'), RecordA)
+        self.assertIs(r.selector('02Ariel'), RecordB)
+        self.assertIs(r.find_record(obj_a), RecordA)
+        self.assertIs(r.find_record(obj_b), RecordB)
 
     def test_save(self):
-        f = FixedEngine([self.record_a, self.record_b], self.selector)
+        f = FixedEngine([RecordA, RecordB], self.selector)
         fi = 'samples/test_sample1.txt'
         f.save(fi, self.objs)
         self.assertTrue(os.path.exists(fi))
@@ -195,7 +203,7 @@ class TestFixedEngine(unittest.TestCase):
         os.remove(fi)
 
     def test_load(self):
-        f = FixedEngine([self.record_a, self.record_b], self.selector)
+        f = FixedEngine([RecordA, RecordB], self.selector)
         objects = f.load('samples/sample_utf8.txt')
         self.assertEqual(len(objects), len(self.objs))
         for y, t in zip(objects, self.objs):
