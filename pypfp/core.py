@@ -43,13 +43,16 @@ class RecordOptions(object):
 
 class RecordMetaClass(type):
 
+    meta_confs = ('fill', 'selector_string', 'stack_function')
+
     def __new__(cls, name, bases, attrs):
 
-        meta = attrs.pop('Meta', None)
+        meta = attrs.get('Meta', None)
         meta_options = {}
         if meta:
             meta_options.update((k, v) for k, v in meta.__dict__.items()
-                                        if not k.startswith('_'))
+                                        if k in RecordMetaClass.meta_confs)
+#                                        if not k.startswith('_'))
         _record_options = RecordOptions(**meta_options)
         stack_function = _record_options.stack_function
 
