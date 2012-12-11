@@ -40,19 +40,32 @@ class RecordOptions(object):
         else:
             self.stack_function = stack_function
 
+    def __str__(self):
+        return '\n'.join(str(k) + ':' + str(v)
+                        for k, v in self.__dict__.items())
+
 
 class RecordMetaClass(type):
 
     meta_confs = ('fill', 'selector_string', 'stack_function')
 
     def __new__(cls, name, bases, attrs):
+        _r = cls.get_record_options(attrs)
+        attrs['_record_options'] = _r
+        for k, v in attrs.items():
+            if isinstance(v, Field):
+                attrs[k] = None
+        return super(RecordMetaClass, cls).__new__(cls, name, bases, attrs)
 
+    @staticmethod
+    def get_record_options(attrs):
         meta = attrs.get('Meta', None)
         meta_options = {}
         if meta:
-            meta_options.update((k, v) for k, v in meta.__dict__.items()
-                                        if k in RecordMetaClass.meta_confs)
-#                                        if not k.startswith('_'))
+            for k, v in meta.__dict__.items():
+                if k in RecordMetaClass.meta_confs:
+                    meta_options[k] = v
+                    meta.__dict__.pop(k)
         _record_options = RecordOptions(**meta_options)
         stack_function = _record_options.stack_function
 
@@ -71,11 +84,8 @@ class RecordMetaClass(type):
             formats.append(u'{:%d}' % v.width)
             last_pos = v.start + v.width - 1
             _record_options.fields.append(v)
-            attrs[k] = None
         _record_options.string_format = u''.join(formats)
-
-        attrs['_record_options'] = _record_options
-        return super(RecordMetaClass, cls).__new__(cls, name, bases, attrs)
+        return _record_options
 
 
 class Record(object):
