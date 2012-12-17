@@ -13,11 +13,12 @@ class Field(object):
         return Field.order
 
     def __init__(self, converter_class, width, start=None, name=None,
-                 **converter_params):
+                db_field=None, **converter_params):
         self.order = Field.get_order()
         self.name = name
         self.start = start
         self.width = width
+        self.db_field = db_field
         self.converter = converter_class(width, **converter_params)
 
     def to_string(self, obj):
@@ -50,15 +51,11 @@ class RecordMetaClass(type):
     meta_confs = ('fill', 'selector_string', 'stack_function')
 
     def __new__(cls, name, bases, attrs):
-        _r = cls.get_record_options(attrs)
-        attrs['_record_options'] = _r
-        for k, v in attrs.items():
-            if isinstance(v, Field):
-                attrs[k] = None
+        cls.init_class(attrs, lambda x: None)
         return super(RecordMetaClass, cls).__new__(cls, name, bases, attrs)
 
     @staticmethod
-    def get_record_options(attrs):
+    def init_class(attrs, get_field_value):
         meta = attrs.get('Meta', None)
         meta_options = {}
         if meta:
@@ -85,7 +82,11 @@ class RecordMetaClass(type):
             last_pos = v.start + v.width - 1
             _record_options.fields.append(v)
         _record_options.string_format = u''.join(formats)
-        return _record_options
+
+        attrs['_record_options'] = _record_options
+
+        for field in _record_options.fields:
+            attrs[field.name] = get_field_value(field)
 
 
 class Record(object):
@@ -104,6 +105,11 @@ class Record(object):
             field.to_value(s, obj)
         return obj
 
+    def __unicode__(self):
+        fields = ', '.join([u'{0}: {1}'.format(f.name, getattr(self, f.name))
+                            for f in self.__class__._record_options.fields])
+        return u'<{0} :: {1}>'.format(self.__class__.__name__, fields)
+
 
 class FixedEngine(object):
 
@@ -116,7 +122,7 @@ class FixedEngine(object):
         elif selector_slice is not None:
             _x, _y = selector_slice
             d = {r._record_options.selector_string: r for r in records}
-            self.selector = lambda s: d[s[_x:_y]]
+            self.selector = lambda s: d.get(s[_x:_y], None)
         elif len(records) == 1:
             r = records[0]
             self.selector = lambda s: r
@@ -137,7 +143,8 @@ class FixedEngine(object):
         res = []
         for line in lines:
             record = self.selector(line)
-            res.append(record.to_value(line))
+            if record:
+                res.append(record.to_value(line))
         return res
 
     def find_record(self, obj):

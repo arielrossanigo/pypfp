@@ -72,6 +72,10 @@ class Int(Number):
         return int(string) * sign
 
 
+class BigInt(Int):
+    pass
+
+
 class Float(Number):
 
     def __init__(self, width, null_string=None, fill='0', align='>',

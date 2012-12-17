@@ -1,5 +1,6 @@
 {
   "mainFile": "", 
+  "use-tabs": false, 
   "venv": "", 
   "relatedProjects": [], 
   "name": "pypfp", 
@@ -8,6 +9,7 @@
   "pythonPath": "python", 
   "preExecScript": "", 
   "programParams": "", 
+  "indentation": 4, 
   "PYTHONPATH": "", 
   "supported-extensions": [
     ".py", 
@@ -19,7 +21,8 @@
     ".json", 
     ".js", 
     ".ini", 
-    ".txt"
+    ".txt", 
+    ".rst"
   ], 
   "project-type": "", 
   "postExecScript": "", 
