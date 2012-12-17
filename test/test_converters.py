@@ -18,8 +18,8 @@ class TestNumber(unittest.TestCase):
     def test_mistake_with_fill_and_sign(self):
         self.assertRaises(AssertionError, Number, width=5, align='>', fill='-')
 
-    def test_len_of_null_string(self):
-        self.assertRaises(AssertionError, Number, width=5, null_string='lol')
+    def test_len_of_default(self):
+        self.assertRaises(AssertionError, Number, width=5, default='lol')
 
 
 class TestInt(unittest.TestCase):
@@ -42,10 +42,10 @@ class TestInt(unittest.TestCase):
     def test_negative_number_to_rigth_with_sign_in_left(self):
         self._test(-10, '-0010', width=5, align='=')
 
-    def test_null_string(self):
-        self._test(None, 'NULL', width=4, align='=', null_string='NULL')
+    def test_default(self):
+        self._test(None, 'NULL', width=4, align='=', default='NULL')
 
-    def test_None_without_null_string(self):
+    def test_None_without_default(self):
         self.assertRaises(ValueError, self._test, None, 'NULL', width=4)
 
     def test_cero(self):
@@ -82,8 +82,8 @@ class TestFloat(unittest.TestCase):
         self._test(-12.34, '- 12.3400', precision=4, width=9, align='=',
                                         fill=' ')
 
-    def test_null_string(self):
-        self._test(None, 'NULL', width=4, align='=', null_string='NULL')
+    def test_default(self):
+        self._test(None, 'NULL', width=4, align='=', default='NULL')
 
     def test_negative_float_with_comma_as_separator(self):
         self._test(-12.34, '-12,3400 ', precision=4, width=9, align='<',
@@ -150,9 +150,9 @@ class TestDateTime(unittest.TestCase):
         self._test(self.today, '  2012/11/13', width=12, str_format='%Y/%m/%d',
                             align='>')
 
-    def test_null_string(self):
+    def test_default(self):
         self._test(None, '    /  /  ', width=12, str_format='%Y/%m/%d',
-                                       null_string='    /  /  ')
+                                       default='    /  /  ')
 
     def test_none_value_not_allowed(self):
         self.assertRaises(ValueError, self._test, None, '    /  /  ', width=12,
