@@ -5,7 +5,7 @@ from pypfp.core import Field, Record
 from pypfp.core import FixedEngine
 from pypfp.converters import Float, Int, String  # , DateTime
 import os
-
+import datetime
 
 class Foo(Record):
 
@@ -23,8 +23,8 @@ class Foo(Record):
 
 class RecordA(Foo):
     typ = Field(Int, 2)
-    name = Field(String, 10)
-    age = Field(Int, 2)
+    name = Field(String, 10, default=u'default')
+    age = Field(Int, 2, default=lambda: datetime.datetime.today().day)
     salary = Field(Float, 14, precision=4)
 
     class Meta:
@@ -49,7 +49,7 @@ class TestRecordDefinition(unittest.TestCase):
             salary = Field(Float, 14, precision=4)
 
         class Example2(Record):
-            name = Field(String, 10, start=0)
+            name = Field(String, 10, start=0, default=u'ariel')
             age = Field(Int, 2, start=12)
             salary = Field(Float, 14, start=14, precision=4)
 
@@ -65,7 +65,6 @@ class TestRecordDefinition(unittest.TestCase):
         self.f1.salary = 123.45
 
         self.f2 = Example2()
-        self.f2.name = 'ariel'
         self.f2.age = 32
         self.f2.salary = 123.45
 
@@ -96,12 +95,18 @@ class TestRecordDefinition(unittest.TestCase):
         self.assertEqual(f.salary, 123.45)
         self.assertEqual(type(f), self.example)
 
+    def test_default(self):
+        a = RecordA()
+        d = datetime.datetime.today().day
+        self.assertEqual(a.age, d)
+        self.assertEqual(a.name, u'default')
+
 
 class TestField(unittest.TestCase):
 
     def setUp(self):
         self.name = Field(String, 10, name='name', start=0, fill='P',
-                          truncate=True)
+                          truncate=True, default=u'default')
         self.age = Field(Int, 4, name='age', start=10)
         self.a = Foo()
         self.a.name = 'ariel'
@@ -111,6 +116,8 @@ class TestField(unittest.TestCase):
         self.assertEquals(self.name.name, 'name')
         self.assertEquals(self.name.start, 0)
         self.assertEquals(self.name.width, 10)
+        self.assertEquals(self.name.converter.default, u'default')
+
         self.assertIsInstance(self.name.converter, String)
         self.assertTrue(self.name.converter.truncate)
         self.assertEquals(self.name.converter.fill, 'P')

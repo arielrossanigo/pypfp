@@ -5,6 +5,7 @@ import peewee
 from pypfp.peewee_adapter import PeeweeRecord
 from pypfp.core import Field, FixedEngine
 from pypfp.converters import Float, Int, String
+import datetime
 
 
 class BaseRecord(PeeweeRecord):
@@ -16,8 +17,8 @@ class BaseRecord(PeeweeRecord):
 
 class RecordA(BaseRecord):
     typ = Field(Int, 2)
-    name = Field(String, 10)
-    age = Field(Int, 2)
+    name = Field(String, 10, default=u'default')
+    age = Field(Int, 2, default=lambda: datetime.datetime.today().second)
     salary = Field(Float, 14, precision=4)
 
     class Meta:
@@ -83,6 +84,20 @@ class TestPeeweeAdapter(TestCase):
             self.assertEquals(y.address, t.address)
             self.assertEquals(y.phone, t.phone)
 
+    def test_default(self):
+        RecordA.drop_table(fail_silently=True)
+        RecordA.create_table(fail_silently=True)
+        c1 = RecordA()
+        d = datetime.datetime.today().second
+        self.assertEquals(c1.name, u'default')
+        self.assertEquals(c1.age, d)
+        c1.client_id = 1
+        c1.typ = 1
+        c1.salary = 123
+        c1.save()
+        c2 = RecordA.get(client_id=1)
+        self.assertEquals(c2.name, c1.name)
+        self.assertEquals(c2.age, c1.age)
 
 
 

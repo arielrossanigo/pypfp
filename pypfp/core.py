@@ -51,8 +51,14 @@ class RecordMetaClass(type):
     meta_confs = ('fill', 'selector_string', 'stack_function')
 
     def __new__(cls, name, bases, attrs):
-        cls.init_class(attrs, lambda x: None)
+        cls.init_class(attrs, RecordMetaClass.get_default_value)
         return super(RecordMetaClass, cls).__new__(cls, name, bases, attrs)
+
+    @staticmethod
+    def get_default_value(field):
+        if callable(field.converter.default):
+            return field.converter.default()
+        return field.converter.default
 
     @staticmethod
     def init_class(attrs, get_field_value):

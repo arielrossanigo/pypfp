@@ -11,11 +11,12 @@ _aligns = {
 
 class Converter(object):
 
-    def __init__(self, width, fill, default=None):
+    def __init__(self, width, fill, null_string=None, default=None):
         self.width = width
-        self.default = default
+        self.null_string = null_string
         assert fill != ''
         self.fill = fill
+        self.default = default
 
     def to_string(self, value):
         raise NotImplementedError()  # pragma: no cover
@@ -26,22 +27,23 @@ class Converter(object):
 
 class Number(Converter):
 
-    def __init__(self, width, default=None, fill='0', align='>'):
+    def __init__(self, width, null_string=None, fill='0', align='>',
+                default=None):
         assert align in '<>='
         assert fill not in '0123456789' or align != '<'
         assert fill != '-' or align != '>'
-        assert default is None or len(default) == width
-        super(Number, self).__init__(width, fill, default)
+        assert null_string is None or len(null_string) == width
+        super(Number, self).__init__(width, fill, null_string, default)
         self.align = align
 
     def to_string(self, value):
-        if value is None and self.default is None:
+        if value is None and self.null_string is None:
             raise ValueError('None value not allowed')
-        elif not self.default is None:
-            return self.default
+        elif not self.null_string is None:
+            return self.null_string
 
     def to_value(self, string):
-        if string == self.default:
+        if string == self.null_string:
             return None
         sign = 1
         if self.align == '=' and string[0] == '-':
@@ -53,8 +55,9 @@ class Number(Converter):
 
 class Int(Number):
 
-    def __init__(self, width, default=None, fill='0', align='>'):
-        super(Int, self).__init__(width, default, fill, align)
+    def __init__(self, width, null_string=None, fill='0', align='>',
+                    default=None):
+        super(Int, self).__init__(width, null_string, fill, align, default)
 
     def to_string(self, value):
         r = super(Int, self).to_string(value)
@@ -78,10 +81,10 @@ class BigInt(Int):
 
 class Float(Number):
 
-    def __init__(self, width, default=None, fill='0', align='>',
-                precision=6, decimal_separator='.'):
+    def __init__(self, width, null_string=None, fill='0', align='>',
+                precision=6, decimal_separator='.', default=None):
         assert decimal_separator != '' or align != '<'
-        super(Float, self).__init__(width, default, fill, align)
+        super(Float, self).__init__(width, null_string, fill, align, default)
         self.precision = precision
         self.decimal_separator = decimal_separator
 
@@ -113,16 +116,17 @@ class Float(Number):
 
 class String(Converter):
 
-    def __init__(self, width, align='<', fill=' ', truncate=False):
+    def __init__(self, width, align='<', fill=' ', truncate=False,
+                default=None):
         assert align in '<>^'
-        super(String, self).__init__(width, fill, None)
+        super(String, self).__init__(width, fill, None, default)
         self.truncate = truncate
         self.align = align
 
     def to_string(self, value):
         string = u'{0:{x.fill}{x.align}{x.width}s}'.format(value, x=self)
         if (len(string) > self.width and not self.truncate):
-            raise ValueError('Value too long')
+            raise ValueError('Value too long: ' + string)
         return string[:self.width]
 
     def to_value(self, string):
@@ -132,18 +136,18 @@ class String(Converter):
 
 class DateTime(Converter):
 
-    def __init__(self, width, str_format, default=None, fill=' ',
-                align='<'):
+    def __init__(self, width, str_format, null_string=None, fill=' ',
+                align='<', default=None):
         assert align in '<>^'
-        super(DateTime, self).__init__(width, fill, default)
+        super(DateTime, self).__init__(width, fill, null_string, default)
         self.align = align
         self.str_format = str_format
 
     def to_string(self, value):
-        if value is None and self.default is None:
+        if value is None and self.null_string is None:
             raise ValueError('None value not allowed')
-        elif not self.default is None:
-            return self.default
+        elif not self.null_string is None:
+            return self.null_string
         s = value.strftime(self.str_format)
         res = '{0:{x.fill}{x.align}{x.width}s}'.format(s, x=self)
         if len(res) > self.width:
@@ -151,7 +155,7 @@ class DateTime(Converter):
         return res
 
     def to_value(self, string):
-        if string == self.default:
+        if string == self.null_string:
             return None
         string = _aligns[self.align](string, self.fill)
         return datetime.strptime(string, self.str_format)

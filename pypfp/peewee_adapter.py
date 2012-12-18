@@ -20,15 +20,16 @@ class PeeweeRecordMetaClass(peewee.BaseModel, RecordMetaClass):
         if field.db_field:
             return field.db_field
         if type(field.converter) is Int:
-            return peewee.IntegerField()
+            return peewee.IntegerField(default=field.converter.default)
         if type(field.converter) is BigInt:
-            return peewee.BigIntegerField()
+            return peewee.BigIntegerField(default=field.converter.default)
         if type(field.converter) is String:
-            return peewee.CharField(max_length=field.width)
+            return peewee.CharField(max_length=field.width,
+                                            default=field.converter.default)
         if type(field.converter) is Float:
-            return peewee.FloatField()
+            return peewee.FloatField(default=field.converter.default)
         if type(field.converter) is DateTime:
-            return peewee.DateField()
+            return peewee.DateField(default=field.converter.default)
         raise ValueError('Converter without map %s' % type(field.converter))
 
 
