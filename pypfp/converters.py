@@ -74,10 +74,10 @@ class Int(Number):
         if r is None:
             return None
         string, sign = r
-        if string == '':
-            return 0
         if self.clean_function:
             string = self.clean_function(string)
+        if string == '':
+            return 0
         return int(string) * sign
 
 
