@@ -11,12 +11,14 @@ _aligns = {
 
 class Converter(object):
 
-    def __init__(self, width, fill, null_string=None, default=None):
+    def __init__(self, width, fill, null_string=None, default=None,
+                clean_function=None):
         self.width = width
         self.null_string = null_string
         assert fill != ''
         self.fill = fill
         self.default = default
+        self.clean_function = clean_function
 
     def to_string(self, value):
         raise NotImplementedError()  # pragma: no cover
@@ -28,12 +30,13 @@ class Converter(object):
 class Number(Converter):
 
     def __init__(self, width, null_string=None, fill='0', align='>',
-                default=None):
+                default=None, clean_function=None):
         assert align in '<>='
         assert fill not in '0123456789' or align != '<'
         assert fill != '-' or align != '>'
         assert null_string is None or len(null_string) == width
-        super(Number, self).__init__(width, fill, null_string, default)
+        super(Number, self).__init__(width, fill, null_string, default,
+                                    clean_function)
         self.align = align
 
     def to_string(self, value):
@@ -56,8 +59,9 @@ class Number(Converter):
 class Int(Number):
 
     def __init__(self, width, null_string=None, fill='0', align='>',
-                    default=None):
-        super(Int, self).__init__(width, null_string, fill, align, default)
+                    default=None, clean_function=None):
+        super(Int, self).__init__(width, null_string, fill, align, default,
+                                clean_function)
 
     def to_string(self, value):
         r = super(Int, self).to_string(value)
@@ -72,6 +76,8 @@ class Int(Number):
         string, sign = r
         if string == '':
             return 0
+        if self.clean_function:
+            string = self.clean_function(string)
         return int(string) * sign
 
 
@@ -82,9 +88,11 @@ class BigInt(Int):
 class Float(Number):
 
     def __init__(self, width, null_string=None, fill='0', align='>',
-                precision=6, decimal_separator='.', default=None):
+                precision=6, decimal_separator='.', default=None,
+                clean_function=None):
         assert decimal_separator != '' or align != '<'
-        super(Float, self).__init__(width, null_string, fill, align, default)
+        super(Float, self).__init__(width, null_string, fill, align, default,
+                                    clean_function)
         self.precision = precision
         self.decimal_separator = decimal_separator
 
@@ -109,6 +117,8 @@ class Float(Number):
                                             string[self.precision - 1:]
         elif self.decimal_separator != '.':
             string = string.replace(self.decimal_separator, '.')
+        if self.clean_function:
+            string = self.clean_function(string)
         if string in ('', '.'):
             return 0
         return float(string) * sign
@@ -117,9 +127,10 @@ class Float(Number):
 class String(Converter):
 
     def __init__(self, width, align='<', fill=' ', truncate=False,
-                default=None):
+                default=None, clean_function=None):
         assert align in '<>^'
-        super(String, self).__init__(width, fill, None, default)
+        super(String, self).__init__(width, fill, None, default,
+                                    clean_function)
         self.truncate = truncate
         self.align = align
 
@@ -131,15 +142,18 @@ class String(Converter):
 
     def to_value(self, string):
         string = _aligns[self.align](string, self.fill)
+        if self.clean_function:
+            string = self.clean_function(string)
         return string
 
 
 class DateTime(Converter):
 
     def __init__(self, width, str_format, null_string=None, fill=' ',
-                align='<', default=None):
+                align='<', default=None, clean_function=None):
         assert align in '<>^'
-        super(DateTime, self).__init__(width, fill, null_string, default)
+        super(DateTime, self).__init__(width, fill, null_string, default,
+                                    clean_function)
         self.align = align
         self.str_format = str_format
 
@@ -158,4 +172,6 @@ class DateTime(Converter):
         if string == self.null_string:
             return None
         string = _aligns[self.align](string, self.fill)
+        if self.clean_function:
+            string = self.clean_function(string)
         return datetime.strptime(string, self.str_format)
