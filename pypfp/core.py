@@ -13,12 +13,13 @@ class Field(object):
         return Field.order
 
     def __init__(self, converter_class, width, start=None, name=None,
-                db_field=None, **converter_params):
+                db_field=None, validator=None, **converter_params):
         self.order = Field.get_order()
         self.name = name
         self.start = start
         self.width = width
         self.db_field = db_field
+        self.validator = validator
         self.converter = converter_class(width, **converter_params)
 
     def to_string(self, obj):
@@ -27,7 +28,17 @@ class Field(object):
 
     def to_value(self, string, obj):
         v = self.converter.to_value(string)
+        if self.validator:
+            self.validator(v)
         setattr(obj, self.name, v)
+
+
+def value_validator(valid_value):
+    def f(value):
+        if value != valid_value:
+            raise ValueError('Invalid value: %s. Expected: %s'
+                % (str(value), str(valid_value)))
+    return f
 
 
 class RecordOptions(object):

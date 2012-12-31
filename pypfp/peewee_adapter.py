@@ -2,7 +2,7 @@
 
 import peewee
 from pypfp.core import RecordMetaClass, Record
-from pypfp.converters import Int, DateTime, String, Float, BigInt
+from pypfp.converters import Int, DateTime, String, Float, BigInt, Decimal
 
 
 class PeeweeRecordMetaClass(peewee.BaseModel, RecordMetaClass):
@@ -19,8 +19,15 @@ class PeeweeRecordMetaClass(peewee.BaseModel, RecordMetaClass):
     def get_db_field(field):
         if field.db_field:
             return field.db_field
+        if field.converter.db_field_class:
+            return field.converter.db_field_class(
+                                            **field.converter.db_field_params)
         if type(field.converter) is Int:
             return peewee.IntegerField(default=field.converter.default)
+        if type(field.converter) is Decimal:
+            return peewee.DecimalField(default=field.converter.default,
+                                    max_digits=field.converter.width,
+                                    decimal_places=field.converter.precision)
         if type(field.converter) is BigInt:
             return peewee.BigIntegerField(default=field.converter.default)
         if type(field.converter) is String:

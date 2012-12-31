@@ -1,7 +1,8 @@
 # -*- coding: utf-8 *-*
 import unittest
-from pypfp.converters import Int, Float, Number, String, DateTime
+from pypfp.converters import Int, Float, Number, String, DateTime, Decimal
 from datetime import datetime
+import decimal
 
 
 class TestNumber(unittest.TestCase):
@@ -95,6 +96,38 @@ class TestFloat(unittest.TestCase):
     def test_cero_without_separator(self):
         self._test(0, '000000000', precision=4, width=9, fill='0',
                                                         decimal_separator='')
+
+    def test_precision_2(self):
+        self._test(123.45, '00000012345', precision=2, width=11, fill='0',
+                                                        decimal_separator='')
+
+
+class TestDecimal(unittest.TestCase):
+
+    def _test(self, value, string, **params):
+        c = Decimal(**params)
+        s2 = c.to_string(value)
+        self.assertEquals(s2, string)
+        self.assertEquals(c.to_value(s2), value)
+
+    def test_no_separator_with_left_align(self):
+        self.assertRaises(AssertionError, Decimal, width=14,
+                            decimal_separator='', align='<')
+
+    def test_positive_decimal_with_separator(self):
+        self._test(decimal.Decimal(12.34), '0012.3400', precision=4, width=9)
+
+    def test_negative_decimal_with_separator(self):
+        self._test(decimal.Decimal(-12.34), '0-12.3400', precision=4,
+                    width=9)
+
+    def test_cero(self):
+        self._test(decimal.Decimal(0), '0000.0000', precision=4,
+                    width=9, fill='0')
+
+    def test_precision_2(self):
+        self._test(decimal.Decimal(123.45), '00000012345', precision=2,
+                    width=11, fill='0', decimal_separator='')
 
 
 class TestString(unittest.TestCase):

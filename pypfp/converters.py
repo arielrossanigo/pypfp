@@ -1,5 +1,6 @@
 # -*- coding: utf-8 *-*
 from datetime import datetime
+import decimal
 
 _aligns = {
             '=': lambda s, f: s.lstrip(f),
@@ -19,6 +20,8 @@ class Converter(object):
         self.fill = fill
         self.default = default
         self.clean_function = clean_function
+        self.db_field_class = None
+        self.db_field_params = None
 
     def to_string(self, value):
         raise NotImplementedError()  # pragma: no cover
@@ -114,7 +117,7 @@ class Float(Number):
         string, sign = r
         if self.decimal_separator == '':
             string = string[:-self.precision] + '.' + \
-                                            string[self.precision - 1:]
+                                            string[-self.precision:]
         elif self.decimal_separator != '.':
             string = string.replace(self.decimal_separator, '.')
         if self.clean_function:
@@ -122,6 +125,15 @@ class Float(Number):
         if string in ('', '.'):
             return 0
         return float(string) * sign
+
+
+class Decimal(Float):
+
+    def to_value(self, string):
+        r = super(Decimal, self).to_value(string)
+        if r is None:
+            return None
+        return decimal.Decimal(r)
 
 
 class String(Converter):
