@@ -130,10 +130,11 @@ class Record(object):
 
 class FixedEngine(object):
 
-    def __init__(self, records, selector=None, selector_slice=None):
+    def __init__(self, records, selector=None, selector_slice=None,
+                    end_with_new_line=False):
         self.records = records
         self.record_dict = {r.__name__: r for r in self.records}
-
+        self.end_with_new_line = end_with_new_line
         if selector is not None:
             self.selector = selector
         elif selector_slice is not None:
@@ -154,6 +155,8 @@ class FixedEngine(object):
 
         with open(path, 'w') as f:
             f.write('\n'.join(lines))
+            if self.end_with_new_line:
+                f.write('\n')
 
     def load(self, path, encoding='utf-8'):
         lines = codecs.open(path, 'r', encoding).readlines()

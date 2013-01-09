@@ -1,4 +1,5 @@
 # -*- coding: utf-8 *-*
+import logging
 from datetime import datetime
 import decimal
 
@@ -8,6 +9,8 @@ _aligns = {
             '>': lambda s, f: s.lstrip(f),
             '^': lambda s, f: s.strip(f),
         }
+
+logger = logging.getLogger('pypfp')
 
 
 class Converter(object):
@@ -70,7 +73,11 @@ class Int(Number):
         r = super(Int, self).to_string(value)
         if r:
             return r
-        return '{0:{x.fill}{x.align}{x.width}d}'.format(value, x=self)
+        try:
+            return '{0:{x.fill}{x.align}{x.width}d}'.format(value, x=self)
+        except Exception, e:
+            logger.error(e)
+            raise
 
     def to_value(self, string):
         r = super(Int, self).to_value(string)
