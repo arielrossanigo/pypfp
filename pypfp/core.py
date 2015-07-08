@@ -1,6 +1,6 @@
 # -*- coding: utf-8 *-*
 
-from converters import *
+from pypfp.converters import *
 import codecs
 
 
